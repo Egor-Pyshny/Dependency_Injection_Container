@@ -94,6 +94,7 @@ namespace MPP_5.DIContainer
                 MethodInfo genericMethod = typeof(DependencyProvider).GetMethod("Resolve");
                 MethodInfo closedMethod = genericMethod.MakeGenericMethod(typeof(TDependency));
                 res = (TDependency)closedMethod.Invoke(this, new object[] {name});
+                dependencies.Remove(dependency);
                 return (TDependency)res;
             }
             if (d.lifeCycle == LifeCycle.Singleton)
