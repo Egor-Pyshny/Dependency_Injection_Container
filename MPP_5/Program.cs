@@ -2,54 +2,65 @@
 using MPP_5.DIConfig;
 using MPP_5.DIContainer;
 using MPP_5.DIUtils;
-using System.Reflection;
-
-Console.WriteLine("Hello, World!");
-var constrs = typeof(A).GetConstructors();
-ConstructorInfo constructor = constrs[0];
+using System.Runtime.Intrinsics.Arm;
 
 DependenciesConfiguration dependenciesConfiguration = new DependenciesConfiguration();
-dependenciesConfiguration.Register<B,A>(LifeCycle.Singleton);
-dependenciesConfiguration.Register<IService, ServiceImpl1>(name: "f1");
+/*dependenciesConfiguration.Register<B,A>();
+dependenciesConfiguration.Register<IService, ServiceImpl1>(name: "f1");*/
+dependenciesConfiguration.Register(typeof(IService<>), typeof(ServiceImpl<>));
+dependenciesConfiguration.Register<IRepository, RepositoryImpl1>();
 dependenciesConfiguration.Register<IService, ServiceImpl>(name: "f2");
-dependenciesConfiguration.Register<IRepository, RepositoryImpl>();
-dependenciesConfiguration.Register<IRepository, RepositoryImpl1>(name: "d1");
+//dependenciesConfiguration.Register<IService<IRepository>, ServiceImpl<IRepository>>();
 DependencyProvider dependencyProvider = new DependencyProvider(dependenciesConfiguration);
-var s = dependencyProvider.Resolve<B>();
-var service1 = dependencyProvider.Resolve<IService>(name: "f1");
 
+//var s = dependencyProvider.Resolve<B>();
+//var services = dependencyProvider.ResolveAll<IService>().ToList();
+var services2 = dependencyProvider.Resolve<IService<IRepository>>();
+var service1 = dependencyProvider.Resolve<IService>(name: "f1");
+ 
 _ = 5;
 public class A : B {
+    string name;
     [DependencyConstructor]
-    public A() { }
+    public A(List<IService> name) { }
     public A(int x) { }
 }
 
 public abstract class B { }
 
 
-interface IService { }
-class ServiceImpl : IService
+public interface IService { }
+public class ServiceImpl : IService
 {
     IRepository r;
     [DependencyConstructor]
     public ServiceImpl(IRepository repository) { r = repository; }
 }
-class ServiceImpl1 : IService
+public class ServiceImpl1 : IService
 {
     IRepository r;
     [DependencyConstructor]
-    public ServiceImpl1([DependencyKey("d1")]IRepository repository) { r = repository; }
+    public ServiceImpl1(IRepository repository) { r = repository; }
 }
-interface IRepository { }
-class RepositoryImpl1 : IRepository
+
+public interface IRepository { }
+public class RepositoryImpl1 : IRepository
 {
     [DependencyConstructor]
     public RepositoryImpl1() { }
 }
-
-class RepositoryImpl : IRepository
+public class RepositoryImpl : IRepository
 {
     [DependencyConstructor]
     public RepositoryImpl() { }
+}
+
+
+interface IService<TRepository> where TRepository : IRepository { }
+
+class ServiceImpl<TRepository> : IService<TRepository> where TRepository : IRepository
+{
+    TRepository r;
+    [DependencyConstructor]
+    public ServiceImpl(TRepository repository) { r = repository; }
 }
