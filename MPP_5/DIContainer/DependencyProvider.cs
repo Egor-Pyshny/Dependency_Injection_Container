@@ -83,19 +83,8 @@ namespace MPP_5.DIContainer
                 if (tmp == null)
                     throw new NullReferenceException("type is null");
                 var tImpl = d.TImplementation.MakeGenericType(typeof(TDependency).GenericTypeArguments[0]);
-                MyDependency dependency = new MyDependency(
-                    typeof(TDependency),
-                    tImpl,
-                    d.lifeCycle,
-                    "__temp_dep",
-                    d.parameters
-                    );
-                dependencies.Add(dependency,null);
-                MethodInfo genericMethod = typeof(DependencyProvider).GetMethod("Resolve");
-                MethodInfo closedMethod = genericMethod.MakeGenericMethod(typeof(TDependency));
-                res = (TDependency)closedMethod.Invoke(this, new object[] {name});
-                dependencies.Remove(dependency);
-                return (TDependency)res;
+                d.TDependency = typeof(TDependency);
+                d.TImplementation = tImpl;
             }
             if (d.lifeCycle == LifeCycle.Singleton)
             {
