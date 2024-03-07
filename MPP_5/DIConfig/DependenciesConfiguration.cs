@@ -14,7 +14,7 @@ namespace MPP_5.DIConfig
         {
             Type dep = typeof(TDependency);
             Type impl = typeof(TImplementation);
-            if (dependencies.Where(d => d.TDependency == dep && d.name == name).ToList().Count == 1)
+            if (dependencies.Where(d => d.TImplementation == impl && d.name == name).ToList().Count == 1)
                 throw new Exception($"{dep.Name} with name {name} already exists");
             dependencies.Add(new MyDependency(dep, impl, lifeCycle, name, parameters.ToList()));
         }

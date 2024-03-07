@@ -2,8 +2,9 @@
 using MPP_2.MyFaker;
 using MPP_5.DIConfig;
 using MPP_5.DIUtils;
+using MPP_5.DIExceptions;
 using System.Reflection;
-using System.Xml.Linq;
+
 
 namespace MPP_5.DIContainer
 {
@@ -20,7 +21,7 @@ namespace MPP_5.DIContainer
             {
                 if (!dep.TImplementation.IsAssignableTo(dep.TDependency) || dep.TImplementation.IsInterface || dep.TImplementation.IsAbstract)
                     if(dep.TImplementation.GetInterfaces().Where(i => i.Name == dep.TDependency.Name).Count()==0)
-                        throw new Exception("DependencyProvider exception");
+                        throw new ImplementationClassException(dep.TDependency, dep.TImplementation);
                 this.dependencies.Add(dep, null);
             }
         }
@@ -77,11 +78,11 @@ namespace MPP_5.DIContainer
             {
                 replace = true;
                 d = FindByDepName(typeof(TDependency));
-                if (d == null)   
-                    throw new NullReferenceException("type is null");
+                if (d == null)
+                    throw new DependencyNotFoundException(typeof(TDependency));
                 var tmp = FindByType(typeof(TDependency).GenericTypeArguments[0]);
                 if (tmp == null)
-                    throw new NullReferenceException("type is null");
+                    throw new DependencyNotFoundException(typeof(TDependency));
                 var tImpl = d.TImplementation.MakeGenericType(typeof(TDependency).GenericTypeArguments[0]);
                 d.TDependency = typeof(TDependency);
                 d.TImplementation = tImpl;
@@ -142,6 +143,7 @@ namespace MPP_5.DIContainer
             }
             return null;
         }
+
         private object CreateDependency(MyDependency dependency)
         {
             HashSet<Type> usedtypes = new HashSet<Type>();
@@ -152,7 +154,7 @@ namespace MPP_5.DIContainer
                 object res = null;
                 var constrs = type.GetConstructors().Where(c => c.GetCustomAttributes<DependencyConstructorAttribute>().Count() > 0).ToArray();
                 if (constrs.Length == 0)
-                    throw new Exception("No constructor with attribute DependencyConstructor");
+                    throw new CunstructorNotFoundException(type);
                 ConstructorInfo constructor = constrs[0];
                 var parms = constructor.GetParameters();
                 List<object> args = new List<object>();
@@ -164,7 +166,8 @@ namespace MPP_5.DIContainer
                         if (paramType.IsGenericType)
                         {
                             Type paramGenType = paramType.GenericTypeArguments[0];
-                            if (paramType.FullName.Contains("System")) {
+                            if (paramType.FullName.Contains("System"))
+                            {
                                 Type listType = typeof(List<>).MakeGenericType(paramGenType);
                                 try
                                 {
@@ -177,8 +180,14 @@ namespace MPP_5.DIContainer
                                     var t = closedMethod.Invoke(this, null);
                                     args.Add(t);
                                 }
-                            }   
-
+                            }
+                            else 
+                            {
+                                MethodInfo genericMethod = typeof(DependencyProvider).GetMethod("Resolve");
+                                MethodInfo closedMethod = genericMethod.MakeGenericMethod(paramType);
+                                var t = closedMethod.Invoke(this, new object[] { null });
+                                args.Add(t);
+                            }
                         }
                         else
                         {
@@ -193,7 +202,8 @@ namespace MPP_5.DIContainer
                             {
                                 dep = FindByType(paramType);
                             }
-                            if (dep == null) throw new Exception("Dep not found");
+                            if (dep == null) 
+                                throw new DependencyNotFoundException(paramType);
                             args.Add(Create(dep));
                         }
                     }
